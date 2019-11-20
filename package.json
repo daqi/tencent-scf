@@ -1,5 +1,5 @@
 {
-  "name": "@serverless/tencent-scf",
+  "name": "@tencent-serverless/tencent-scf-beta",
   "description": "Tencent Serverless Cloud Function",
   "version": "1.2.9",
   "main": "./serverless.js",
@@ -14,7 +14,7 @@
   "license": "Apache",
   "dependencies": {
     "@serverless/core": "^1.1.1",
-    "@serverless/tencent-apigateway": "^1.9.6",
+    "@tencent-serverless/tencent-apigateway-beta": "^1.9.6",
     "archiver": "^3.1.1",
     "assert": "^2.0.0",
     "async": "^2.6.3",

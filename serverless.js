@@ -146,15 +146,7 @@ class TencentCloudFunction extends Component {
       ? false
       : true
     if (inputs.enableRoleAuth) {
-      const camRole = await this.load('@serverless/tencent-cam-role')
-      await camRole({
-        roleName: 'SCF_QcsRole',
-        description: 'Serverless Framework',
-        service: ['scf.qcloud.com'],
-        policy: {
-          policyName: ['QcloudAccessForScfRole']
-        }
-      })
+      await func.addRole()
     }
 
     // clean old function
@@ -206,7 +198,7 @@ class TencentCloudFunction extends Component {
         let tencentApiGateway
         if (thisTrigger.Type == 'APIGW') {
           tencentApiGateway = await this.load(
-            '@serverless/tencent-apigateway',
+            '@tencent-serverless/tencent-apigateway-beta',
             thisTrigger.Properties.serviceName
           )
           const apigwOutput = await tencentApiGateway(thisTrigger.Properties)
@@ -288,7 +280,7 @@ class TencentCloudFunction extends Component {
     for (let i = 0; i < funcObject.APIGateway.length; i++) {
       try {
         const arr = funcObject.APIGateway[i].toString().split(' - ')
-        tencentApiGateway = await this.load('@serverless/tencent-apigateway', arr[0])
+        tencentApiGateway = await this.load('@tencent-serverless/tencent-apigateway-beta', arr[0])
         await tencentApiGateway.remove()
       } catch (e) {}
     }

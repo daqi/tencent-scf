@@ -5,7 +5,7 @@
 ```yml
 # serverless.yml
 myFunction:
-  component: "@serverless/tencent-scf"
+  component: "@tencent-serverless/tencent-scf-beta"
   inputs:
     name: myFunction1
     enableRoleAuth: ture
