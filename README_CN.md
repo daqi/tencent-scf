@@ -3,6 +3,8 @@
 ## 简介
 该组件是serverless-tencent组件库中的基础组件之一。通过云函数SCF组件，可以快速，方便的创建，配置和管理腾讯云的SCF云函数。
 
+* 该版本为体验版本，不能确保稳定性，如果用户生产环境请使用我们的稳定版。
+
 ## 快速开始
 &nbsp;
 
@@ -70,7 +72,7 @@ exports.main_handler = async (event, context, callback) => {
 ```yml
 # serverless.yml
 myFunction1:
-  component: "@serverless/tencent-scf"
+  component: "@tencent-serverless/tencent-scf-beta"
   inputs:
     name: myFunction1
     codeUri: ./code       # 代码目录

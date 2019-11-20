@@ -4,6 +4,8 @@ Deploy scf functions to tencent in seconds with [Serverless Components](https://
 
 &nbsp;
 
+* This version is an experience version and does not guarantee stability.
+
 * [请点击这里查看中文版部署文档](./README_CN.md)
 
 &nbsp;
@@ -62,7 +64,7 @@ exports.main_handler = async (event, context, callback) => {
 # serverless.yml
 
 myFunction:
-  component: "@serverless/tencent-scf"
+  component: "@tencent-serverless/tencent-scf-beta"
   inputs:
     name: myFunction
     codeUri: ./code
