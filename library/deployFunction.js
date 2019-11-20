@@ -84,7 +84,10 @@ class DeployFunction extends Abstract {
         const createRoleHandler = util.promisify(this.camClient.CreateRole.bind(this.camClient))
         await createRoleHandler(createRoleModels)
       } catch (e) {
-        this.context.debug('Create role error: ' + e)
+        if (e && e.message.match('role name in use')) {
+        } else {
+          this.context.debug('Create role error: ' + e)
+        }
       }
       try {
         const attachRolePolicyModels = new camModels.AttachRolePolicyRequest()
@@ -98,14 +101,10 @@ class DeployFunction extends Abstract {
           attachRolePolicyBody.PolicyId = policyId
           attachRolePolicyModels.from_json_string(JSON.stringify(attachRolePolicyBody))
           await attachRolePolicyHandler(attachRolePolicyModels)
-        } catch (e) {
-          this.context.debug(`Attach policy id '${attachRolePolicyBody.PolicyId}' error: ${e}`)
-        }
+        } catch (e) {}
         await utils.sleep(400)
       } catch (e) {}
-    } catch (e) {
-      this.context.debug('Check policy list error: ' + e)
-    }
+    } catch (e) {}
   }
 
   async updateFunctionCode(ns, funcObject) {
