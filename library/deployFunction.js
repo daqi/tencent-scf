@@ -86,7 +86,7 @@ class DeployFunction extends Abstract {
       } catch (e) {
         if (e && e.message.match('role name in use')) {
         } else {
-          this.context.debug('Create role error: ' + e)
+          this.context.debug('Create role error : ' + e)
         }
       }
       try {
