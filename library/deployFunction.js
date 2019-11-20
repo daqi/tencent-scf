@@ -50,7 +50,7 @@ class DeployFunction extends Abstract {
           for (let i = 0; i < pagePolicList.List.length; i++) {
             if (policyName == pagePolicList.List[i].PolicyName) {
               havePolicy = true
-              policyId = pagePolicList.List[i].policyId
+              policyId = pagePolicList.List[i].PolicyId
               break
             }
           }
