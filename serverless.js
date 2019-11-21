@@ -291,21 +291,26 @@ class TencentCloudFunction extends Component {
   }
 
   async remove() {
+    // login
+    const temp = this.context.instance.state.status
+    this.context.instance.state.status = true
+    let { tencent } = this.context.credentials
+    if (!tencent) {
+      tencent = await this.getTempKey(temp)
+      this.context.credentials.tencent = tencent
+    }
+
+    // get AppId
+    if (!this.context.credentials.tencent.AppId) {
+      const appId = await this.getAppid(tencent)
+      this.context.credentials.tencent.AppId = appId.AppId
+    }
+
     this.context.status(`Removing`)
 
     if (_.isEmpty(this.state.deployed)) {
       this.context.debug(`Aborting removal. Function name not found in state.`)
       return
-    }
-
-    let { tencent } = this.context.credentials
-    if (!tencent) {
-      tencent = await this.getTempKey(tencent)
-      this.context.credentials.tencent = tencent
-    }
-    if (!this.context.credentials.tencent.AppId) {
-      const appId = await this.getAppid(tencent)
-      this.context.credentials.tencent.AppId = appId.AppId
     }
 
     const funcObject = this.state.deployed
