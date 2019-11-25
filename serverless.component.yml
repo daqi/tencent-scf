@@ -1,0 +1,9 @@
+name: tencentExpress
+# version: 0.0.4
+org: eahefnawy
+author: serverless # required
+description: Provisions Tencent Express.
+keywords: tencnet, express
+repo: https://github.com/owner/project
+readme: '' # The readme of the Serverless Component.
+license: MIT # required

@@ -7,6 +7,7 @@ const Provider = require('./library/provider')
 const _ = require('lodash')
 const fs = require('fs')
 const util = require('util')
+const path = require('path')
 const utils = require('./library/utils')
 const tencentcloud = require('tencentcloud-sdk-nodejs')
 const ClientProfile = require('tencentcloud-sdk-nodejs/tencentcloud/common/profile/client_profile.js')
@@ -151,20 +152,23 @@ class TencentCloudFunction extends Component {
     }
   }
 
-  async default(inputs = {}) {
+  async deploy(inputs = {}) {
+    await this.debug('deploying')
+    inputs.handler = 'index.handler'
     // login
-    const temp = this.context.instance.state.status
-    this.context.instance.state.status = true
-    let { tencent } = this.context.credentials
-    if (!tencent) {
-      tencent = await this.getTempKey(temp)
-      this.context.credentials.tencent = tencent
-    }
+    // const temp = this.context.instance.state.status
+    // this.context.instance.state.status = true
+    const { tencent } = this.credentials
+    // if (!tencent) {
+    //   tencent = await this.getTempKey(temp)
+    //   this.context.credentials.tencent = tencent
+    // }
 
     // get AppId
-    if (!this.context.credentials.tencent.AppId) {
+
+    if (!this.credentials.tencent.AppId) {
       const appId = await this.getAppid(tencent)
-      this.context.credentials.tencent.AppId = appId.AppId
+      this.credentials.tencent.AppId = appId.AppId
     }
 
     const provider = new Provider(inputs)
@@ -172,29 +176,33 @@ class TencentCloudFunction extends Component {
 
     const option = {
       region: provider.region,
-      timestamp: this.context.credentials.tencent.timestamp || null,
-      token: this.context.credentials.tencent.token || null
+      timestamp: this.credentials.tencent.timestamp || null,
+      token: this.credentials.tencent.token || null
     }
     const attr = {
       appid: tencent.AppId,
       secret_id: tencent.SecretId,
       secret_key: tencent.SecretKey,
       options: option,
-      context: this.context
+      context: this
     }
+
+    await this.debug('constructing')
     const func = new DeployFunction(attr)
     const trigger = new DeployTrigger(attr)
 
+    await this.debug('adding role')
     // add role
     inputs.enableRoleAuth = inputs.enableRoleAuth
       ? true
       : inputs.enableRoleAuth == false
-        ? false
-        : true
+      ? false
+      : true
     if (inputs.enableRoleAuth) {
       await func.addRole()
     }
 
+    await this.debug('cleaning old functions')
     // clean old function
     const funcObject = _.cloneDeep(services.Resources.default[inputs.name])
     funcObject.FuncName = inputs.name
@@ -204,37 +212,65 @@ class TencentCloudFunction extends Component {
           const handler = new RemoveFunction(attr)
           await handler.remove(this.state.deployed.Name)
         } catch (e) {
-          this.context.debug('Remove old function failed.')
+          await this.debug('Remove old function failed.')
         }
       }
     }
 
+    await this.debug('packing dir')
+
+    fs.copyFileSync(
+      path.join(__dirname, 'shims', 'binary-case.js'),
+      path.join(inputs.src, 'binary-case.js')
+    )
+    fs.copyFileSync(path.join(__dirname, 'shims', 'index.js'), path.join(inputs.src, 'index.js'))
+    fs.copyFileSync(
+      path.join(__dirname, 'shims', 'media-typer.js'),
+      path.join(inputs.src, 'media-typer.js')
+    )
+    fs.copyFileSync(
+      path.join(__dirname, 'shims', 'middleware.js'),
+      path.join(inputs.src, 'middleware.js')
+    )
+    fs.copyFileSync(
+      path.join(__dirname, 'shims', 'mime-db.json'),
+      path.join(inputs.src, 'mime-db.json')
+    )
+    fs.copyFileSync(
+      path.join(__dirname, 'shims', 'mime-types.js'),
+      path.join(inputs.src, 'mime-types.js')
+    )
+    fs.copyFileSync(
+      path.join(__dirname, 'shims', 'type-is.js'),
+      path.join(inputs.src, 'type-is.js')
+    )
+
     // packDir
-    const zipOutput = util.format('%s/%s.zip', this.context.instance.stateRoot, inputs.name)
-    this.context.debug(`Compressing function ${funcObject.FuncName} file to ${zipOutput}.`)
-    await utils.packDir(inputs.codeUri, zipOutput, inputs.include, inputs.exclude)
-    this.context.debug(`Compressed function ${funcObject.FuncName} file successful`)
+    const zipOutput = util.format('%s/%s.zip', '/tmp', inputs.name)
+    await this.debug(`Compressing function ${funcObject.FuncName} file to ${zipOutput}.`)
+    await utils.packDir(inputs.src, zipOutput, inputs.include, inputs.exclude)
+    await this.debug(`Compressed function ${funcObject.FuncName} file successful`)
 
     // upload to cos
     const cosBucketName = funcObject.Properties.CodeUri.Bucket
     const cosBucketKey = funcObject.Properties.CodeUri.Key
-    this.context.debug(`Uploading service package to cos[${cosBucketName}]. ${cosBucketKey}`)
+    await this.debug(`Uploading service package to cos[${cosBucketName}]. ${cosBucketKey}`)
     await func.uploadPackage2Cos(cosBucketName, cosBucketKey, zipOutput)
-    this.context.debug(`Uploaded package successful ${zipOutput}`)
+    await this.debug(`Uploaded package successful ${zipOutput}`)
 
     // create function
-    this.context.debug(`Creating function ${funcObject.FuncName}`)
+    await this.debug(`Creating function ${funcObject.FuncName}`)
     const oldFunc = await func.deploy('default', funcObject)
-    this.context.debug(`Created function ${funcObject.FuncName} successful`)
+    await this.debug(`Created function ${funcObject.FuncName} successful`)
 
     // set tags
-    this.context.debug(`Setting tags for function ${funcObject.FuncName}`)
+    await this.debug(`Setting tags for function ${funcObject.FuncName}`)
     await func.createTags('default', funcObject.FuncName, funcObject.Properties.Tags)
 
     // deploy trigger
     // apigw: apigw component
     // cos/ckkafka/cmq/timer: cloud api/sdk
-    this.context.debug(`Creating trigger for function ${funcObject.FuncName}`)
+    await this.debug(`Creating trigger for function ${funcObject.FuncName}`)
     const apiTriggerList = new Array()
     const events = new Array()
     if (funcObject.Properties && funcObject.Properties.Events) {
@@ -243,10 +279,7 @@ class TencentCloudFunction extends Component {
         const thisTrigger = funcObject.Properties.Events[i][keys[0]]
         let tencentApiGateway
         if (thisTrigger.Type == 'APIGW') {
-          tencentApiGateway = await this.load(
-            '@serverless/tencent-apigateway',
-            thisTrigger.Properties.serviceName
-          )
+          tencentApiGateway = await this.load('tencentApig', thisTrigger.Properties.serviceName)
           const apigwOutput = await tencentApiGateway(thisTrigger.Properties)
           apiTriggerList.push(thisTrigger.Properties.serviceName + ' - ' + apigwOutput['subDomain'])
         } else {
@@ -258,36 +291,55 @@ class TencentCloudFunction extends Component {
         'default',
         oldFunc ? oldFunc.Triggers : null,
         funcObject,
-        (response, thisTrigger) => {
-          this.context.debug(
+        (response, thisTrigger) =>
+          this.debug(
             `Created ${thisTrigger.Type} trigger ${response.TriggerName} for function ${funcObject.FuncName} success.`
-          )
-        },
+          ),
         (error) => {
           throw error
         }
       )
     }
 
-    this.context.debug(`Deployed function ${funcObject.FuncName} successful`)
+    await this.debug(`Deployed function ${funcObject.FuncName} successful`)
 
-    const output = {
-      Name: funcObject.FuncName,
-      Runtime: funcObject.Properties.Runtime,
-      Handler: funcObject.Properties.Handler,
-      MemorySize: funcObject.Properties.MemorySize,
-      Timeout: funcObject.Properties.Timeout,
-      Region: provider.region,
-      Role: funcObject.Properties.Role,
-      Description: funcObject.Properties.Description
+    const apigwParam = {
+      apiName: inputs.apiName,
+      serviceName: inputs.serviceName,
+      description: 'Serverless Framework tencent-express Component',
+      serviceId: inputs.serviceId,
+      region: inputs.region,
+      protocol:
+        inputs.apigatewayConf && inputs.apigatewayConf.protocol
+          ? inputs.apigatewayConf.protocol
+          : 'http',
+      environment:
+        inputs.apigatewayConf && inputs.apigatewayConf.environment
+          ? inputs.apigatewayConf.environment
+          : 'release',
+      endpoints: [
+        {
+          path: '/',
+          method: 'ANY',
+          function: {
+            isIntegratedResponse: true,
+            functionName: funcObject.FuncName
+          }
+        }
+      ]
     }
-    if (apiTriggerList.length > 0) {
-      output.APIGateway = apiTriggerList
-    }
-    this.state.deployed = output
-    await this.save()
 
-    return output
+    await this.debug(`loading apig`)
+    const apig = this.load('tencentApig', 'apig')
+
+    await this.debug(`deploying apig`)
+    const tencentApiGatewayOutputs = await apig.deploy(apigwParam)
+
+    const outputs = {
+      url: `${tencentApiGatewayOutputs.protocol}://${tencentApiGatewayOutputs.subDomain}/${tencentApiGatewayOutputs.environment}/`
+    }
+
+    return outputs
   }
 
   async remove() {
