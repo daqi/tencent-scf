@@ -310,7 +310,7 @@ class TencentCloudFunction extends Component {
     // login
     const temp = this.context.instance.state.status
     this.context.instance.state.status = true
-    let { tencent } = this.context.credentials
+    let {tencent} = this.context.credentials
     if (!tencent) {
       tencent = await this.getTempKey(temp)
       this.context.credentials.tencent = tencent
@@ -346,12 +346,15 @@ class TencentCloudFunction extends Component {
     const handler = new RemoveFunction(attr)
 
     let tencentApiGateway
-    for (let i = 0; i < funcObject.APIGateway.length; i++) {
-      try {
-        const arr = funcObject.APIGateway[i].toString().split(' - ')
-        tencentApiGateway = await this.load('@tencent-serverless/tencent-apigateway-beta', arr[0])
-        await tencentApiGateway.remove()
-      } catch (e) {}
+    if (funcObject.APIGateway && funcObject.APIGateway.length > 0) {
+      for (let i = 0; i < funcObject.APIGateway.length; i++) {
+        try {
+          const arr = funcObject.APIGateway[i].toString().split(' - ')
+          tencentApiGateway = await this.load('@tencent-serverless/tencent-apigateway-beta', arr[0])
+          await tencentApiGateway.remove()
+        } catch (e) {
+        }
+      }
     }
 
     await handler.remove(funcObject.Name)
