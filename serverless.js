@@ -310,7 +310,7 @@ class TencentCloudFunction extends Component {
     // login
     const temp = this.context.instance.state.status
     this.context.instance.state.status = true
-    let {tencent} = this.context.credentials
+    let { tencent } = this.context.credentials
     if (!tencent) {
       tencent = await this.getTempKey(temp)
       this.context.credentials.tencent = tencent
@@ -352,8 +352,7 @@ class TencentCloudFunction extends Component {
           const arr = funcObject.APIGateway[i].toString().split(' - ')
           tencentApiGateway = await this.load('@tencent-serverless/tencent-apigateway-beta', arr[0])
           await tencentApiGateway.remove()
-        } catch (e) {
-        }
+        } catch (e) {}
       }
     }
 
