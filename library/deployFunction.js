@@ -292,10 +292,10 @@ class DeployFunction extends Abstract {
       }
     }
 
-    // 查询旧包
+    // 查询旧版本
     handler = util.promisify(this.cosClient.getBucket.bind(this.cosClient))
     let oldVers = []
-    const keepNum = 3
+    const oldKeepNum = 2
     try {
       const res = await handler({
         Bucket: cosBucketNameFull,
@@ -307,10 +307,10 @@ class DeployFunction extends Abstract {
     } catch (e) {
       throw e
     }
-    // 删除旧包
-    if (oldVers.length > keepNum) {
+    // 删除旧版本
+    if (oldVers.length > oldKeepNum) {
       handler = util.promisify(this.cosClient.deleteObject.bind(this.cosClient))
-      for (const oldVer of oldVers.slice(keepNum)) {
+      for (const oldVer of oldVers.slice(0, oldVers.length - oldKeepNum)) {
         await handler({
           Bucket: cosBucketNameFull,
           Region: region,
