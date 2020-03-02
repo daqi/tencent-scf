@@ -292,6 +292,33 @@ class DeployFunction extends Abstract {
       }
     }
 
+    // 查询旧包
+    handler = util.promisify(this.cosClient.getBucket.bind(this.cosClient))
+    let oldVers = []
+    const keepNum = 3
+    try {
+      const res = await handler({
+        Bucket: cosBucketNameFull,
+        Region: region,
+        Prefix: key.slice(0, -15),
+        Delimiter: '/'
+      })
+      oldVers = res.Contents
+    } catch (e) {
+      throw e
+    }
+    // 删除旧包
+    if (oldVers.length > keepNum) {
+      handler = util.promisify(this.cosClient.deleteObject.bind(this.cosClient))
+      for (const oldVer of oldVers.slice(keepNum)) {
+        await handler({
+          Bucket: cosBucketNameFull,
+          Region: region,
+          Key: oldVer.Key
+        })
+      }
+    }
+
     if (fs.statSync(filePath).size <= 10 * 1024 * 1024) {
       const objArgs = {
         Bucket: cosBucketNameFull,
