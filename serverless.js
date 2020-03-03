@@ -140,7 +140,8 @@ class TencentCloudFunction extends Component {
           })
         }
       }
-      await func.uploadPackage2Cos(cosBucketName, cosBucketKey, zipOutput, onProgress)
+      const { keepVersion } = inputs
+      await func.uploadPackage2Cos(cosBucketName, cosBucketKey, zipOutput, onProgress, keepVersion)
 
       this.context.debug(`Uploaded package successful ${zipOutput}`)
 

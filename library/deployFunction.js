@@ -258,7 +258,7 @@ class DeployFunction extends Abstract {
     }
   }
 
-  async uploadPackage2Cos(bucketName, key, filePath, onProgress) {
+  async uploadPackage2Cos(bucketName, key, filePath, onProgress, keepVersion = 2) {
     let handler
     const { region } = this.options
     const cosBucketNameFull = util.format('%s-%s', bucketName, this.appid)
@@ -292,25 +292,29 @@ class DeployFunction extends Abstract {
       }
     }
 
+    // 控制旧版本数量
     // 查询旧版本
     handler = util.promisify(this.cosClient.getBucket.bind(this.cosClient))
     let oldVers = []
-    const oldKeepNum = 2
     try {
       const res = await handler({
         Bucket: cosBucketNameFull,
         Region: region,
-        Prefix: key.slice(0, -15),
-        Delimiter: '/'
+        Prefix: key.slice(0, -15)
       })
       oldVers = res.Contents
     } catch (e) {
       throw e
     }
     // 删除旧版本
-    if (oldVers.length > oldKeepNum) {
+    if (oldVers.length > keepVersion) {
       handler = util.promisify(this.cosClient.deleteObject.bind(this.cosClient))
-      for (const oldVer of oldVers.slice(0, oldVers.length - oldKeepNum)) {
+      const arr = oldVers
+        .sort((fst, snd) => {
+          return new Date(fst.LastModified) - new Date(snd.LastModified)
+        })
+        .slice(0, oldVers.length - keepVersion)
+      for (const oldVer of arr) {
         await handler({
           Bucket: cosBucketNameFull,
           Region: region,
